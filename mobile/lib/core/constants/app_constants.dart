@@ -1,6 +1,9 @@
 class AppConstants {
   static const String appName = 'Personal Money Manager';
-  static const String apiBaseUrl = 'http://10.0.2.2:8000/api/v1'; // Local Android emulator or localhost
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api-money.kurt.web.id/api/v1',
+  );
   static const String storageTokenKey = 'auth_bearer_token';
   static const String storageUserKey = 'auth_user_data';
 

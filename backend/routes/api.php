@@ -17,6 +17,14 @@ use App\Http\Controllers\Api\Webhook\PaymentGatewayWebhookController;
 use App\Http\Controllers\Api\Webhook\RevenueCatWebhookController;
 use Illuminate\Support\Facades\Route;
 
+// Fallback login route for unauthenticated middleware redirects
+Route::get('/login', function () {
+    return response()->json([
+        'success' => false,
+        'message' => 'Unauthenticated.',
+    ], 401);
+})->name('login');
+
 // Public Auth Endpoints
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
