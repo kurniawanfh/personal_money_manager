@@ -38,6 +38,27 @@ jobs:
             flutter create --platforms=android --org com.kurniawanfh .
           fi
 
+      # Decode release keystore when the secrets are configured.
+      # Repo secrets needed: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD, KEY_ALIAS
+      # Create KEYSTORE_BASE64 with: base64 -w0 release.jks
+      - name: Configure Release Signing
+        if: env.KEYSTORE_BASE64 != ''
+        working-directory: mobile/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+          cat > key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.jks
+          EOF
+          chmod 600 key.properties release.jks
+
       - name: Install Flutter Dependencies
         working-directory: mobile
         run: flutter pub get
@@ -49,11 +70,20 @@ jobs:
 
       - name: Build Release APK
         working-directory: mobile
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi
+
+      - name: Verify APK Signature
+        working-directory: mobile
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          for apk in build/app/outputs/flutter-apk/*.apk; do
+            echo "--- $apk"
+            "$APKSIGNER" verify --print-certs "$apk" | grep 'certificate DN' || true
+          done
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/build/app/outputs/flutter-apk/*.apk
           retention-days: 14
